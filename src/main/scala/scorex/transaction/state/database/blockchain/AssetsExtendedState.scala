@@ -4,7 +4,7 @@ import com.google.common.base.Charsets
 import scorex.crypto.encode.Base58
 import scorex.transaction._
 import scorex.transaction.assets.{AssetIssuance, BurnTransaction, IssueTransaction, ReissueTransaction}
-import scorex.transaction.state.database.state.extension.StateExtension
+import scorex.transaction.state.database.state.extension.{StateProcessor, StateValidator}
 import scorex.transaction.state.database.state.storage.{AssetsExtendedStateStorageI, StateStorageI}
 import scorex.utils.ScorexLogging
 
@@ -12,7 +12,7 @@ import scala.util.{Failure, Success}
 
 //TODO move to state.extension package
 class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorageI) extends ScorexLogging
-  with StateExtension {
+  with StateValidator with StateProcessor{
 
   override def isValid(tx: Transaction): Boolean = tx match {
     case tx: ReissueTransaction =>

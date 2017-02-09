@@ -4,7 +4,7 @@ import scorex.settings.ChainParameters
 import scorex.transaction.state.database.state.storage.StateStorageI
 import scorex.transaction.{PaymentTransaction, Transaction}
 
-class IncludedValidator(storage: StateStorageI, settings: ChainParameters) extends StateExtension {
+class IncludedValidator(storage: StateStorageI, settings: ChainParameters) extends StateValidator with StateProcessor {
 
 
   override def isValid(tx: Transaction): Boolean = tx match {

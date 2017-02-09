@@ -6,7 +6,7 @@ import scorex.transaction.state.database.state._
 import scorex.transaction.state.database.state.storage.StateStorageI
 import scorex.transaction.{PaymentTransaction, Transaction}
 
-class IncrementingTimestampValidator(settings: ChainParameters, storage: StateStorageI) extends StateExtension {
+class IncrementingTimestampValidator(settings: ChainParameters, storage: StateStorageI) extends StateValidator {
 
   override def isValid(transaction: Transaction): Boolean = transaction match {
     case tx: PaymentTransaction =>
@@ -68,7 +68,4 @@ class IncrementingTimestampValidator(settings: ChainParameters, storage: StateSt
       case None => None
     }
   }
-
-
-  override def process(tx: Transaction, blockTs: Long, height: Int): Unit = {}
 }

@@ -5,7 +5,7 @@ import scorex.transaction.assets.exchange.ExchangeTransaction
 import scorex.transaction.assets.{BurnTransaction, IssueTransaction, ReissueTransaction, TransferTransaction}
 import scorex.transaction.{GenesisTransaction, PaymentTransaction, Transaction}
 
-class ActivatedValidator(settings: ChainParameters) extends StateExtension {
+class ActivatedValidator(settings: ChainParameters) extends StateValidator {
 
 
   override def isValid(tx: Transaction): Boolean = tx match {
@@ -19,6 +19,4 @@ class ActivatedValidator(settings: ChainParameters) extends StateExtension {
     case _ => false
   }
 
-
-  override def process(tx: Transaction, blockTs: Long, height: Int): Unit = {}
 }

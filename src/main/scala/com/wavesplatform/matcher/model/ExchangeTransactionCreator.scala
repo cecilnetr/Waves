@@ -15,9 +15,7 @@ trait ExchangeTransactionCreator {
   val storedState: StoredState
   val wallet: Wallet
   val settings: WavesSettings
-  //TODO ???
-  val omss = storedState.validators.filter(_.isInstanceOf[OrderMatchStoredState]).head
-    .asInstanceOf[OrderMatchStoredState]
+  val omss = new OrderMatchStoredState(storedState.storage)
 
   private var txTime: Long = 0
 

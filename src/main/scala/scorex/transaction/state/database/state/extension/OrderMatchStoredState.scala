@@ -5,7 +5,7 @@ import scorex.transaction.Transaction
 import scorex.transaction.assets.exchange.{Order, ExchangeTransaction}
 import scorex.transaction.state.database.state.storage.{OrderMatchStorageI, StateStorageI}
 
-class OrderMatchStoredState(storage: StateStorageI with OrderMatchStorageI) extends StateExtension {
+class OrderMatchStoredState(storage: StateStorageI with OrderMatchStorageI) extends StateValidator with StateProcessor {
 
 
   override def isValid(tx: Transaction): Boolean = tx match {

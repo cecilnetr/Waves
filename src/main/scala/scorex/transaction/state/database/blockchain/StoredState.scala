@@ -26,11 +26,23 @@ import scala.util.control.NonFatal
   *
   * Use fromDB method of StoredState object to create new instance
   */
-class StoredState(protected val storage: StateStorageI,
-                  val assetsExtension: AssetsExtendedState,
-                  val incrementingTimestampValidator: IncrementingTimestampValidator,
-                  val validators: Seq[StateExtension],
-                  settings: ChainParameters) extends LagonakiState with ScorexLogging {
+class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI with OrderMatchStorageI, settings: ChainParameters)
+  extends LagonakiState with ScorexLogging {
+
+  val assetsExtension = new AssetsExtendedState(storage)
+  val incrementingTimestampValidator = new IncrementingTimestampValidator(settings, storage)
+  private val includedValidator = new IncludedValidator(storage, settings)
+  private val orderMatchStoredStateValidator = new OrderMatchStoredState(storage)
+  val validators: Seq[StateValidator] = Seq(
+    assetsExtension,
+    incrementingTimestampValidator,
+    new GenesisValidator,
+    orderMatchStoredStateValidator,
+    includedValidator,
+    new ActivatedValidator(settings)
+  )
+
+  val processors: Seq[StateProcessor] = Seq(assetsExtension, orderMatchStoredStateValidator, includedValidator)
 
   override def included(id: Array[Byte]): Option[Int] = storage.included(id)
 
@@ -232,7 +244,7 @@ class StoredState(protected val storage: StateStorageI,
       storage.putLastStates(ch._1.key, h)
       ch._2._2.foreach {
         case tx: Transaction =>
-          validators.foreach(_.process(tx, blockTs, h))
+          processors.foreach(_.process(tx, blockTs, h))
         case _ =>
       }
       ch._1.assetId.foreach(storage.updateAccountAssets(ch._1.account.address, _))
@@ -373,17 +385,8 @@ object StoredState {
       override val db: MVStore = mvStore
       if (db.getStoreVersion > 0) db.rollback()
     }
-    val extendedState = new AssetsExtendedState(storage)
-    val incrementingTimestampValidator = new IncrementingTimestampValidator(settings, storage)
-    val validators = Seq(
-      extendedState,
-      incrementingTimestampValidator,
-      new GenesisValidator,
-      new OrderMatchStoredState(storage),
-      new IncludedValidator(storage, settings),
-      new ActivatedValidator(settings)
-    )
-    new StoredState(storage, extendedState, incrementingTimestampValidator, validators, settings)
+
+    new StoredState(storage, settings)
   }
 
 }
