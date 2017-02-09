@@ -30,7 +30,7 @@ case class AssetsApiRoute(application: Application)(implicit val context: ActorR
   val settings = application.settings
 
   private val wallet = application.wallet
-  private val state = application.blockStorage.state.asInstanceOf[StoredState]
+  private val state = application.blockStorage.state
   private implicit val transactionModule = application.transactionModule.asInstanceOf[SimpleTransactionModule]
 
   override lazy val route =

@@ -14,6 +14,7 @@ import play.api.libs.json._
 import scorex.api.http._
 import scorex.app.Application
 import scorex.crypto.encode.Base58
+import scorex.transaction.State
 import scorex.transaction.assets.exchange.OrderJson._
 import scorex.transaction.assets.exchange.{AssetPair, Order}
 import scorex.transaction.state.database.blockchain.StoredState
@@ -29,7 +30,7 @@ case class MatcherApiRoute(application: Application, matcher: ActorRef)(implicit
                                                                         implicit val context: ActorRefFactory) extends ApiRoute {
 
   val wallet: Wallet = application.wallet
-  val storedState: StoredState = application.blockStorage.state.asInstanceOf[StoredState]
+  val storedState: State = application.blockStorage.state
 
   override lazy val route: Route =
     pathPrefix("matcher") {

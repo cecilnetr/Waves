@@ -7,7 +7,7 @@ import scorex.transaction.state.database.state.storage.{OrderMatchStorageI, Stat
 
 object OrderMatchStoredState {
 
-  def process(storage: StateStorageI with OrderMatchStorageI)(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
+  def process(storage: OrderMatchStorageI)(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
     case om: ExchangeTransaction =>
       def isSaveNeeded(order: Order): Boolean = {
         order.expiration >= blockTs

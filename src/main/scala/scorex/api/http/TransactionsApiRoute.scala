@@ -10,7 +10,7 @@ import play.api.libs.json.{JsArray, Json}
 import scorex.account.Account
 import scorex.app.Application
 import scorex.crypto.encode.Base58
-import scorex.transaction.{LagonakiState, TransactionsBlockField}
+import scorex.transaction.TransactionsBlockField
 import scorex.transaction.state.database.blockchain.StoredBlockchain
 
 import scala.util.{Success, Try}
@@ -23,7 +23,7 @@ case class TransactionsApiRoute(application: Application)(implicit val context: 
 
   val settings = application.settings
 
-  private val state: LagonakiState = application.blockStorage.state
+  private val state: scorex.transaction.State = application.blockStorage.state
 
   override lazy val route =
     pathPrefix("transactions") {

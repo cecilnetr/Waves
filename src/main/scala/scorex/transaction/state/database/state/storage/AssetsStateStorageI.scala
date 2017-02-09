@@ -1,6 +1,6 @@
 package scorex.transaction.state.database.state.storage
 
-trait AssetsExtendedStateStorageI {
+trait AssetsStateStorageI {
 
   def getTransactions(key: String): Set[String]
 

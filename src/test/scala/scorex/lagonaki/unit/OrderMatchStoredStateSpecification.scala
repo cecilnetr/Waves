@@ -14,7 +14,7 @@ import scorex.transaction.assets.{IssueTransaction, TransferTransaction}
 import scorex.transaction.state.database.blockchain.StoredState
 import scorex.transaction.state.database.state.extension.OrderMatchStoredState
 import scorex.transaction.state.wallet.{IssueRequest, TransferRequest}
-import scorex.transaction.{AssetAcc, AssetId, GenesisTransaction, TransactionGen}
+import scorex.transaction._
 import scorex.utils.{ByteArrayExtension, NTP}
 import scorex.wallet.Wallet
 
@@ -29,7 +29,7 @@ class OrderMatchStoredStateSpecification extends FunSuite with Matchers with Bef
   val WAVES_UNITS = Order.PriceConstant
 
   val db = new MVStore.Builder().fileName(stateFile.toString).compress().open()
-  val state = StoredState.fromDB(db, ChainParameters.Enabled)
+  val state : State = StoredState.fromDB(db, ChainParameters.Enabled)
   state.applyBlock(TestBlock(Seq(GenesisTransaction.create(acc1, 1000 * WAVES_UNITS, 0).right.get,
     GenesisTransaction.create(acc2, 100 * WAVES_UNITS, 0).right.get)))
 

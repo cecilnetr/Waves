@@ -3,7 +3,7 @@ package scorex.transaction.state.database.state.storage
 import org.h2.mvstore.{MVMap, MVStore}
 import scorex.utils.LogMVMapBuilder
 
-trait MVStoreAssetsExtendedStateStorage extends AssetsExtendedStateStorageI{
+trait MVStoreAssetsStateStorage extends AssetsStateStorageI{
   val db: MVStore
 
   // ============= transactions

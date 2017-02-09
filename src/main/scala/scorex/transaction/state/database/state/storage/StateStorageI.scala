@@ -2,6 +2,7 @@ package scorex.transaction.state.database.state.storage
 
 import scorex.transaction._
 import scorex.transaction.state.database.state._
+import scala.language.implicitConversions
 
 trait StateStorageI {
 
@@ -38,7 +39,7 @@ trait StateStorageI {
 
 object StateStorageI {
 
-  implicit def richStateStorageI(s: StateStorageI) = new RichStateStorageI(s)
+  implicit def richStateStorageI(s: StateStorageI): RichStateStorageI = new RichStateStorageI(s)
 
   class RichStateStorageI(s: StateStorageI) {
 

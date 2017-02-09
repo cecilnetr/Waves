@@ -24,13 +24,4 @@ trait TransactionModule {
 
   def onNewOffchainTransaction(transaction: Transaction): Unit
 
-  lazy val balancesSupport: Boolean = blockStorage.state match {
-    case _: State with BalanceSheet => true
-    case _ => false
-  }
-
-  lazy val accountWatchingSupport: Boolean = blockStorage.state match {
-    case _: State with AccountTransactionsHistory => true
-    case _ => false
-  }
 }

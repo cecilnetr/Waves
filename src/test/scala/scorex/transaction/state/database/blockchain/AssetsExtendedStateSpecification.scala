@@ -5,14 +5,14 @@ import org.h2.mvstore.MVStore
 import org.scalatest.prop.{GeneratorDrivenPropertyChecks, PropertyChecks}
 import org.scalatest.{Assertions, Matchers, PropSpec}
 import scorex.transaction.TransactionGen
-import scorex.transaction.state.database.state.storage.{MVStoreAssetsExtendedStateStorage, MVStoreStateStorage}
+import scorex.transaction.state.database.state.storage.{MVStoreAssetsStateStorage, MVStoreStateStorage}
 import AssetsExtendedState._
 
 class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with GeneratorDrivenPropertyChecks
   with Matchers with TransactionGen with Assertions {
 
   property("Assets quantity and issueability should work on one update") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
 
@@ -24,7 +24,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Assets quantity should work on huge sequential updates") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     forAll(bytes32gen) { assetId =>
@@ -40,7 +40,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Reissuable should work in simple case") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)
@@ -52,7 +52,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Reissuable should work correctly in case of few updates per block") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)
@@ -76,7 +76,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Rollback should work after simple sequence of updates") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)
@@ -100,7 +100,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Rollback should work after simple sequence of updates with gaps") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)
@@ -124,7 +124,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Duplicated calls should work correctly") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)
@@ -150,7 +150,7 @@ class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with
   }
 
   property("Burn should work after simple sequence of updates and rollback") {
-    val storage = new MVStoreStateStorage with MVStoreAssetsExtendedStateStorage {
+    val storage = new MVStoreStateStorage with MVStoreAssetsStateStorage {
       override val db: MVStore = new MVStore.Builder().open()
     }
     val assetId = getId(0)

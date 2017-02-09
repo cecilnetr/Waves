@@ -10,7 +10,7 @@ import com.wavesplatform.settings.WavesSettings
 import scorex.api.http.CompositeHttpService
 import scorex.app.Application
 import scorex.settings.Settings
-import scorex.transaction.BlockStorage
+import scorex.transaction.{BlockStorage, State}
 import scorex.transaction.state.database.blockchain.StoredState
 import scorex.utils.ScorexLogging
 import scorex.wallet.Wallet
@@ -31,7 +31,7 @@ trait MatcherApplication extends ScorexLogging {
 
   def wallet: Wallet
 
-  def storedState: StoredState = blockStorage.state.asInstanceOf[StoredState]
+  def storedState: State = blockStorage.state
 
   lazy val matcherApiRoutes = Seq(
     MatcherApiRoute(this.asInstanceOf[Application], matcher)

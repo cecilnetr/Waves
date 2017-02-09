@@ -4,13 +4,13 @@ import com.google.common.base.Charsets
 import scorex.crypto.encode.Base58
 import scorex.transaction._
 import scorex.transaction.assets.{AssetIssuance, BurnTransaction, IssueTransaction, ReissueTransaction}
-import scorex.transaction.state.database.state.storage.{AssetsExtendedStateStorageI, StateStorageI}
+import scorex.transaction.state.database.state.storage.{AssetsStateStorageI, StateStorageI}
 import scorex.utils.ScorexLogging
 
 import scala.util.{Failure, Success}
 
 object AssetsExtendedState extends ScorexLogging {
-  def process(storage: AssetsExtendedStateStorageI)(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
+  def process(storage: AssetsStateStorageI)(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
     case tx: AssetIssuance =>
       AssetsExtendedState.addAsset(storage)(tx.assetId, height, tx.id, tx.quantity, tx.reissuable)
     case tx: BurnTransaction =>
@@ -18,7 +18,7 @@ object AssetsExtendedState extends ScorexLogging {
     case _ =>
   }
 
-  def isValid(storage: StateStorageI with AssetsExtendedStateStorageI) (tx: Transaction): Boolean = tx match {
+  def isValid(storage: StateStorageI with AssetsStateStorageI)(tx: Transaction): Boolean = tx match {
     case tx: ReissueTransaction =>
       val reissueValid: Boolean = {
         val sameSender = isIssuerAddress(storage)(tx.assetId, tx.sender.address)
@@ -43,7 +43,7 @@ object AssetsExtendedState extends ScorexLogging {
       })
   }
 
-  private[blockchain] def addAsset(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long, reissuable: Boolean): Unit = {
+  private[blockchain] def addAsset(storage: AssetsStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long, reissuable: Boolean): Unit = {
     val asset = Base58.encode(assetId)
     val transaction = Base58.encode(transactionId)
     val assetAtHeight = s"$asset@$height"
@@ -55,7 +55,7 @@ object AssetsExtendedState extends ScorexLogging {
     storage.setReissuable(assetAtTransaction, reissuable)
   }
 
-  private[blockchain] def burnAsset(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long): Unit = {
+  private[blockchain] def burnAsset(storage: AssetsStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long): Unit = {
     require(quantity <= 0, "Quantity of burned asset should be negative")
 
     val asset = Base58.encode(assetId)
@@ -68,7 +68,7 @@ object AssetsExtendedState extends ScorexLogging {
     storage.setQuantity(assetAtTransaction, quantity)
   }
 
-  def rollbackTo(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int): Unit = {
+  def rollbackTo(storage: AssetsStateStorageI)(assetId: AssetId, height: Int): Unit = {
     val asset = Base58.encode(assetId)
 
     val heights = storage.getHeights(asset)
@@ -86,7 +86,7 @@ object AssetsExtendedState extends ScorexLogging {
     }
   }
 
-  def getAssetQuantity(storage: AssetsExtendedStateStorageI)(assetId: AssetId): Long = {
+  def getAssetQuantity(storage: AssetsStateStorageI)(assetId: AssetId): Long = {
     val asset = Base58.encode(assetId)
     val heights = storage.getHeights(asset)
 
@@ -100,7 +100,7 @@ object AssetsExtendedState extends ScorexLogging {
     }
   }
 
-  def isReissuable(storage: AssetsExtendedStateStorageI)(assetId: AssetId): Boolean = {
+  def isReissuable(storage: AssetsStateStorageI)(assetId: AssetId): Boolean = {
     val asset = Base58.encode(assetId)
     val heights = storage.getHeights(asset)
 

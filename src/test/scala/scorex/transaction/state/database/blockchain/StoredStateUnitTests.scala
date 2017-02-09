@@ -56,14 +56,13 @@ class StoredStateUnitTests extends PropSpec with PropertyChecks with GeneratorDr
   new File(stateFile).delete()
 
   val db = new MVStore.Builder().fileName(stateFile).compress().open()
-  val state = StoredState.fromDB(db, forkParametersWithEnableUnissuedAssetsCheck)
+  val state: scorex.transaction.State = StoredState.fromDB(db, forkParametersWithEnableUnissuedAssetsCheck)
   val testAcc = new PrivateKeyAccount(scorex.utils.randomBytes(64))
   val testAssetAcc = AssetAcc(testAcc, None)
   val testAdd = testAcc.address
 
   val applyChanges = PrivateMethod[Unit]('applyChanges)
   val calcNewBalances = PrivateMethod[Unit]('calcNewBalances)
-
 
 
   property("validate plenty of transactions") {

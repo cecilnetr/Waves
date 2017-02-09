@@ -20,8 +20,8 @@ import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.control.NonFatal
 
-class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI with OrderMatchStorageI, settings: ChainParameters)
-  extends LagonakiState with ScorexLogging {
+class StoredState(val storage: TheStorage, settings: ChainParameters)
+  extends State with ScorexLogging {
 
   val validators: Seq[(Transaction) => Boolean] = Seq(
     AssetsExtendedState.isValid(storage),
@@ -98,7 +98,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     val newBalances: Map[AssetAcc, (AccState, Reasons)] = calcNewBalances(block.transactionData, fees, block.timestamp < settings.allowTemporaryNegativeUntil)
     newBalances.foreach(nb => require(nb._2._1.balance >= 0))
 
-    applyChanges(newBalances, block.timestampField.value)
+    applyChanges(newBalances, block.timestamp)
     log.trace(s"New state height is ${storage.stateHeight}, hash: $hash, totalBalance: $totalBalance")
 
     this
@@ -207,7 +207,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     filterValidTransactionsByState(filteredFromFuture)
   }
 
-  private[blockchain] def calcNewBalances(trans: Seq[Transaction], fees: Map[AssetAcc, (AccState, Reasons)], allowTemporaryNegative: Boolean):
+  def calcNewBalances(trans: Seq[Transaction], fees: Map[AssetAcc, (AccState, Reasons)], allowTemporaryNegative: Boolean):
   Map[AssetAcc, (AccState, Reasons)] = {
     val newBalances: Map[AssetAcc, (AccState, Reasons)] = trans.foldLeft(fees) { case (changes, tx) =>
       tx.balanceChanges().foldLeft(changes) { case (iChanges, bc) =>
@@ -226,9 +226,9 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     newBalances
   }
 
-  private[blockchain] def totalAssetQuantity(assetId: AssetId): Long = AssetsExtendedState.getAssetQuantity(storage)(assetId)
+  def totalAssetQuantity(assetId: AssetId): Long = AssetsExtendedState.getAssetQuantity(storage)(assetId)
 
-  private[blockchain] def applyChanges(changes: Map[AssetAcc, (AccState, Reasons)], blockTs: Long = NTP.correctedTime()): Unit = synchronized {
+  def applyChanges(changes: Map[AssetAcc, (AccState, Reasons)], blockTs: Long = NTP.correctedTime()): Unit = synchronized {
     storage.setStateHeight(storage.stateHeight + 1)
     val h = storage.stateHeight
     changes.foreach { ch =>
@@ -290,9 +290,6 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     }
   }
 
-
-  private val DefaultLimit = 50
-
   private def excludeTransactions(transactions: Seq[Transaction], exclude: Iterable[Transaction]) =
     transactions.filter(t1 => !exclude.exists(t2 => t2.id sameElements t1.id))
 
@@ -303,7 +300,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     }
   }
 
-  private[blockchain] def isTValid(transaction: Transaction): Boolean = {
+  def isTValid(transaction: Transaction): Boolean = {
     validators.forall(_.apply(transaction))
   }
 
@@ -361,19 +358,16 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
       })
   }
 
-  //for debugging purposes only
-  override def toString: String = toJson(None).toString()
-
-  //for debugging purposes only
   def hash: Int = {
-    (BigInt(FastCryptographicHash(toString.getBytes)) % Int.MaxValue).toInt
+    (BigInt(FastCryptographicHash(toJson(None).toString().getBytes)) % Int.MaxValue).toInt
   }
+
 
 }
 
 object StoredState {
-  def fromDB(mvStore: MVStore, settings: ChainParameters): StoredState = {
-    val storage = new MVStoreStateStorage with MVStoreOrderMatchStorage with MVStoreAssetsExtendedStateStorage {
+  def fromDB(mvStore: MVStore, settings: ChainParameters): State = {
+    val storage = new TheStorage {
       override val db: MVStore = mvStore
       if (db.getStoreVersion > 0) db.rollback()
     }
