@@ -29,20 +29,19 @@ import scala.util.control.NonFatal
 class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI with OrderMatchStorageI, settings: ChainParameters)
   extends LagonakiState with ScorexLogging {
 
-  val assetsExtension = new AssetsExtendedState(storage)
-  val incrementingTimestampValidator = new IncrementingTimestampValidator(settings, storage)
-  private val includedValidator = new IncludedValidator(storage, settings)
-  private val orderMatchStoredStateValidator = new OrderMatchStoredState(storage)
-  val validators: Seq[StateValidator] = Seq(
-    assetsExtension,
-    incrementingTimestampValidator,
-    new GenesisValidator,
-    orderMatchStoredStateValidator,
-    includedValidator,
-    new ActivatedValidator(settings)
+  val validators: Seq[(Transaction) => Boolean] = Seq(
+    AssetsExtendedState.isValid(storage),
+    IncrementingTimestampValidator.isValid(storage, settings),
+    GenesisValidator.isValid(storage),
+    OrderMatchStoredState.isValid(storage),
+    IncludedValidator.isValid(storage, settings),
+    ActivatedValidator.isValid(settings)
   )
 
-  val processors: Seq[StateProcessor] = Seq(assetsExtension, orderMatchStoredStateValidator, includedValidator)
+  val processors: Seq[StateProcessor] = Seq(
+    new AssetsExtendedState(storage),
+    new OrderMatchStoredStateProcessor(storage),
+    new IncludedStateProcessor(storage, settings))
 
   override def included(id: Array[Byte]): Option[Int] = storage.included(id)
 
@@ -58,7 +57,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
         val assetId = triedAssetId.get
         val maybeIssueTransaction = getIssueTransaction(assetId)
         if (maybeIssueTransaction.isDefined)
-          result.updated(assetId, (balance, assetsExtension.isReissuable(assetId), totalAssetQuantity(assetId),
+          result.updated(assetId, (balance, AssetsExtendedState.isReissuable(storage)(assetId), totalAssetQuantity(assetId),
             maybeIssueTransaction.get))
         else result
       } else result
@@ -74,9 +73,9 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
           storage.removeTransaction(id)
           storage.getTransaction(id) match {
             case Some(t: AssetIssuance) =>
-              assetsExtension.rollbackTo(t.assetId, currentHeight)
+              AssetsExtendedState.rollbackTo(storage)(t.assetId, currentHeight)
             case Some(t: BurnTransaction) =>
-              assetsExtension.rollbackTo(t.assetId, currentHeight)
+              AssetsExtendedState.rollbackTo(storage)(t.assetId, currentHeight)
             case _ =>
           }
         })
@@ -164,7 +163,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     val validTransactions = if (allowInvalidPaymentTransactionsByTimestamp) {
       txs
     } else {
-      val invalidPaymentTransactionsByTimestamp = incrementingTimestampValidator.invalidatePaymentTransactionsByTimestamp(txs)
+      val invalidPaymentTransactionsByTimestamp = IncrementingTimestampValidator.invalidatePaymentTransactionsByTimestamp(storage)(txs)
       excludeTransactions(txs, invalidPaymentTransactionsByTimestamp)
     }
 
@@ -233,7 +232,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     newBalances
   }
 
-  private[blockchain] def totalAssetQuantity(assetId: AssetId): Long = assetsExtension.getAssetQuantity(assetId)
+  private[blockchain] def totalAssetQuantity(assetId: AssetId): Long = AssetsExtendedState.getAssetQuantity(storage)(assetId)
 
   private[blockchain] def applyChanges(changes: Map[AssetAcc, (AccState, Reasons)], blockTs: Long = NTP.correctedTime()): Unit = synchronized {
     storage.setStateHeight(storage.stateHeight + 1)
@@ -311,9 +310,8 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
   }
 
   private[blockchain] def isTValid(transaction: Transaction): Boolean = {
-    validators.forall(_.isValid(transaction))
+    validators.forall(_.apply(transaction))
   }
-
 
   private def getIssueTransaction(assetId: AssetId): Option[IssueTransaction] =
     storage.getTransactionBytes(assetId).flatMap(b => IssueTransaction.parseBytes(b).toOption)

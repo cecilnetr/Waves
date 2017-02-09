@@ -1,11 +1,12 @@
 package scorex.transaction.state.database.state.extension
 
+import scorex.transaction.state.database.state.storage.StateStorageI
 import scorex.transaction.{GenesisTransaction, Transaction}
 
-class GenesisValidator extends StateValidator {
+object GenesisValidator {
 
-  override def isValid(tx: Transaction): Boolean = tx match {
-    case gtx: GenesisTransaction => true // height == 0
+  def isValid(storage: StateStorageI)(tx: Transaction): Boolean = tx match {
+    case gtx: GenesisTransaction => storage.stateHeight == 0
     case _ => true
   }
 

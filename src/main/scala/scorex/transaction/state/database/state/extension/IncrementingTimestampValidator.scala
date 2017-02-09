@@ -6,29 +6,29 @@ import scorex.transaction.state.database.state._
 import scorex.transaction.state.database.state.storage.StateStorageI
 import scorex.transaction.{PaymentTransaction, Transaction}
 
-class IncrementingTimestampValidator(settings: ChainParameters, storage: StateStorageI) extends StateValidator {
+object IncrementingTimestampValidator {
 
-  override def isValid(transaction: Transaction): Boolean = transaction match {
+  def isValid(storage: StateStorageI, settings: ChainParameters)(transaction: Transaction): Boolean = transaction match {
     case tx: PaymentTransaction =>
-      tx.timestamp < settings.allowInvalidPaymentTransactionsByTimestamp || isTimestampCorrect(tx)
+      tx.timestamp < settings.allowInvalidPaymentTransactionsByTimestamp || isTimestampCorrect(storage)(tx)
     case _ => true
   }
 
-  private def isTimestampCorrect(tx: PaymentTransaction): Boolean = {
-    lastAccountPaymentTransaction(tx.sender) match {
+  private def isTimestampCorrect(storage: StateStorageI)(tx: PaymentTransaction): Boolean = {
+    lastAccountPaymentTransaction(storage)(tx.sender) match {
       case Some(lastTransaction) => lastTransaction.timestamp < tx.timestamp
       case None => true
     }
   }
 
 
-  def invalidatePaymentTransactionsByTimestamp(transactions: Seq[Transaction]): Seq[Transaction] = {
+  def invalidatePaymentTransactionsByTimestamp(storage: StateStorageI)(transactions: Seq[Transaction]): Seq[Transaction] = {
     val paymentTransactions = transactions.filter(_.isInstanceOf[PaymentTransaction])
       .map(_.asInstanceOf[PaymentTransaction])
 
     val initialSelection: Map[String, (List[Transaction], Long)] = Map(paymentTransactions.map { payment =>
       val address = payment.sender.address
-      val stateTimestamp = lastAccountPaymentTransaction(payment.sender) match {
+      val stateTimestamp = lastAccountPaymentTransaction(storage)(payment.sender) match {
         case Some(lastTransaction) => lastTransaction.timestamp
         case _ => 0
       }
@@ -49,7 +49,7 @@ class IncrementingTimestampValidator(settings: ChainParameters, storage: StateSt
     selection.foldLeft(List[Transaction]()) { (l, s) => l ++ s._2._1 }
   }
 
-  def lastAccountPaymentTransaction(account: Account): Option[PaymentTransaction] = {
+  def lastAccountPaymentTransaction(storage: StateStorageI)(account: Account): Option[PaymentTransaction] = {
     def loop(h: Int, address: Address): Option[PaymentTransaction] = {
       storage.getAccountChanges(address, h) match {
         case Some(row) =>

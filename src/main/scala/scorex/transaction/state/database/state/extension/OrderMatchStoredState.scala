@@ -5,20 +5,12 @@ import scorex.transaction.Transaction
 import scorex.transaction.assets.exchange.{Order, ExchangeTransaction}
 import scorex.transaction.state.database.state.storage.{OrderMatchStorageI, StateStorageI}
 
-class OrderMatchStoredState(storage: StateStorageI with OrderMatchStorageI) extends StateValidator with StateProcessor {
-
-
-  override def isValid(tx: Transaction): Boolean = tx match {
-    case om: ExchangeTransaction => OrderMatchStoredState.isOrderMatchValid(om, findPrevOrderMatchTxs(om))
-    case _ => true
-  }
+class OrderMatchStoredStateProcessor(storage: StateStorageI with OrderMatchStorageI) extends StateProcessor {
 
   override def process(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
     case om: ExchangeTransaction => putOrderMatch(om, blockTs)
     case _ =>
   }
-
-  val MaxLiveDays = (Order.MaxLiveTime / 24L * 60L * 60L * 1000L).toInt
 
   private def putOrderMatch(om: ExchangeTransaction, blockTs: Long): Unit = {
     def isSaveNeeded(order: Order): Boolean = {
@@ -27,7 +19,7 @@ class OrderMatchStoredState(storage: StateStorageI with OrderMatchStorageI) exte
 
     def putOrder(order: Order) = {
       if (isSaveNeeded(order)) {
-        val orderDay = calcStartDay(order.expiration)
+        val orderDay = OrderMatchStoredState.calcStartDay(order.expiration)
         storage.putSavedDays(orderDay)
         val orderIdStr = Base58.encode(order.id)
         val omIdStr = Base58.encode(om.id)
@@ -36,50 +28,58 @@ class OrderMatchStoredState(storage: StateStorageI with OrderMatchStorageI) exte
       }
     }
 
+    def removeObsoleteDays(timestamp: Long): Unit = {
+      val ts = OrderMatchStoredState.calcStartDay(timestamp)
+      val daysToRemove: List[Long] = storage.savedDaysKeys.filter(t => t < ts)
+      if (daysToRemove.nonEmpty) {
+        synchronized {
+          storage.removeOrderMatchDays(daysToRemove)
+        }
+      }
+    }
+
     putOrder(om.buyOrder)
     putOrder(om.sellOrder)
-
     removeObsoleteDays(blockTs)
   }
 
-  private def calcStartDay(t: Long): Long = {
-    val ts = t / 1000
-    ts - ts % (24 * 60 * 60)
-  }
 
-  private def removeObsoleteDays(timestamp: Long): Unit = {
-    val ts = calcStartDay(timestamp)
-    val daysToRemove: List[Long] = storage.savedDaysKeys.filter(t => t < ts)
-    if (daysToRemove.nonEmpty) {
-      synchronized {
-        storage.removeOrderMatchDays(daysToRemove)
-      }
-    }
-  }
-
-  private val emptyTxIdSeq = Array.empty[String]
-
-  private def parseTxSeq(a: Array[String]): Set[ExchangeTransaction] = {
-    a.toSet.flatMap { s: String => Base58.decode(s).toOption }.flatMap { id =>
-      storage.getTransactionBytes(id).flatMap(b => ExchangeTransaction.parseBytes(b).toOption)
-    }
-  }
-
-  private def findPrevOrderMatchTxs(om: ExchangeTransaction): Set[ExchangeTransaction] = {
-    findPrevOrderMatchTxs(om.buyOrder) ++ findPrevOrderMatchTxs(om.sellOrder)
-  }
-
-  def findPrevOrderMatchTxs(order: Order): Set[ExchangeTransaction] = {
-    val orderDay = calcStartDay(order.expiration)
-    if (storage.containsSavedDays(orderDay)) {
-      parseTxSeq(storage.getOrderMatchTxByDay(calcStartDay(order.expiration), Base58.encode(order.id))
-        .getOrElse(emptyTxIdSeq))
-    } else Set.empty[ExchangeTransaction]
-  }
 }
 
 
 object OrderMatchStoredState {
+
+  def isValid(storage: StateStorageI with OrderMatchStorageI)(tx: Transaction): Boolean = tx match {
+    case om: ExchangeTransaction => OrderMatchStoredState.isOrderMatchValid(om, findPrevOrderMatchTxs(storage)(om))
+    case _ => true
+  }
+
+  private def findPrevOrderMatchTxs(storage: StateStorageI with OrderMatchStorageI)(om: ExchangeTransaction): Set[ExchangeTransaction] = {
+    val emptyTxIdSeq = Array.empty[String]
+
+    def parseTxSeq(a: Array[String]): Set[ExchangeTransaction] = {
+      a.toSet.flatMap { s: String => Base58.decode(s).toOption }.flatMap { id =>
+        storage.getTransactionBytes(id).flatMap(b => ExchangeTransaction.parseBytes(b).toOption)
+      }
+    }
+
+    def findPrevOrderMatchTxs(order: Order): Set[ExchangeTransaction] = {
+      val orderDay = OrderMatchStoredState.calcStartDay(order.expiration)
+      if (storage.containsSavedDays(orderDay)) {
+        parseTxSeq(storage.getOrderMatchTxByDay(OrderMatchStoredState.calcStartDay(order.expiration), Base58.encode(order.id))
+          .getOrElse(emptyTxIdSeq))
+      } else Set.empty[ExchangeTransaction]
+    }
+
+    findPrevOrderMatchTxs(om.buyOrder) ++ findPrevOrderMatchTxs(om.sellOrder)
+  }
+
+
+  def calcStartDay(t: Long): Long = {
+    val ts = t / 1000
+    ts - ts % (24 * 60 * 60)
+  }
+
   def isOrderMatchValid(exTrans: ExchangeTransaction, previousMatches: Set[ExchangeTransaction]): Boolean = {
 
     lazy val buyTransactions = previousMatches.filter { om =>

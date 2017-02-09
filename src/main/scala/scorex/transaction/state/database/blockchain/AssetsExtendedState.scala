@@ -4,38 +4,41 @@ import com.google.common.base.Charsets
 import scorex.crypto.encode.Base58
 import scorex.transaction._
 import scorex.transaction.assets.{AssetIssuance, BurnTransaction, IssueTransaction, ReissueTransaction}
-import scorex.transaction.state.database.state.extension.{StateProcessor, StateValidator}
+import scorex.transaction.state.database.state.extension.StateProcessor
 import scorex.transaction.state.database.state.storage.{AssetsExtendedStateStorageI, StateStorageI}
 import scorex.utils.ScorexLogging
 
 import scala.util.{Failure, Success}
 
 //TODO move to state.extension package
-class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorageI) extends ScorexLogging
-  with StateValidator with StateProcessor{
+class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorageI) extends ScorexLogging with StateProcessor {
 
-  override def isValid(tx: Transaction): Boolean = tx match {
+  override def process(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
+    case tx: AssetIssuance =>
+      AssetsExtendedState.addAsset(storage)(tx.assetId, height, tx.id, tx.quantity, tx.reissuable)
+    case tx: BurnTransaction =>
+      AssetsExtendedState.burnAsset(storage)(tx.assetId, height, tx.id, -tx.amount)
+    case _ =>
+  }
+}
+
+object AssetsExtendedState extends ScorexLogging {
+
+  def isValid(storage: StateStorageI with AssetsExtendedStateStorageI) (tx: Transaction): Boolean = tx match {
     case tx: ReissueTransaction =>
       val reissueValid: Boolean = {
-        val sameSender = isIssuerAddress(tx.assetId, tx.sender.address)
-        val reissuable = isReissuable(tx.assetId)
+        val sameSender = isIssuerAddress(storage)(tx.assetId, tx.sender.address)
+        val reissuable = isReissuable(storage)(tx.assetId)
         sameSender && reissuable
       }
       reissueValid
     case tx: BurnTransaction =>
-      isIssuerAddress(tx.assetId, tx.sender.address)
+      isIssuerAddress(storage)(tx.assetId, tx.sender.address)
     case _ => true
   }
 
-  override def process(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
-    case tx: AssetIssuance =>
-      addAsset(tx.assetId, height, tx.id, tx.quantity, tx.reissuable)
-    case tx: BurnTransaction =>
-      burnAsset(tx.assetId, height, tx.id, -tx.amount)
-    case _ =>
-  }
 
-  private def isIssuerAddress(assetId: Array[Byte], address: String): Boolean = {
+  private def isIssuerAddress(storage: StateStorageI)(assetId: Array[Byte], address: String): Boolean = {
     storage.getTransactionBytes(assetId).exists(b =>
       IssueTransaction.parseBytes(b) match {
         case Success(issue) =>
@@ -47,7 +50,7 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
   }
 
 
-  private[blockchain] def addAsset(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long, reissuable: Boolean): Unit = {
+  private[blockchain] def addAsset(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long, reissuable: Boolean): Unit = {
     val asset = Base58.encode(assetId)
     val transaction = Base58.encode(transactionId)
     val assetAtHeight = s"$asset@$height"
@@ -59,7 +62,7 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
     storage.setReissuable(assetAtTransaction, reissuable)
   }
 
-  private[blockchain] def burnAsset(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long): Unit = {
+  private[blockchain] def burnAsset(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long): Unit = {
     require(quantity <= 0, "Quantity of burned asset should be negative")
 
     val asset = Base58.encode(assetId)
@@ -72,7 +75,7 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
     storage.setQuantity(assetAtTransaction, quantity)
   }
 
-  def rollbackTo(assetId: AssetId, height: Int): Unit = {
+  def rollbackTo(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int): Unit = {
     val asset = Base58.encode(assetId)
 
     val heights = storage.getHeights(asset)
@@ -90,7 +93,7 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
     }
   }
 
-  def getAssetQuantity(assetId: AssetId): Long = {
+  def getAssetQuantity(storage: AssetsExtendedStateStorageI)(assetId: AssetId): Long = {
     val asset = Base58.encode(assetId)
     val heights = storage.getHeights(asset)
 
@@ -104,7 +107,7 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
     }
   }
 
-  def isReissuable(assetId: AssetId): Boolean = {
+  def isReissuable(storage: AssetsExtendedStateStorageI)(assetId: AssetId): Boolean = {
     val asset = Base58.encode(assetId)
     val heights = storage.getHeights(asset)
 
@@ -119,10 +122,10 @@ class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorage
     } else false
   }
 
-  def getAssetName(assetId: AssetId): String = {
+  def getAssetName(storage: StateStorageI)(assetId: AssetId): String = {
     storage.getTransaction(assetId).flatMap {
-        case tx: IssueTransaction => Some(tx.asInstanceOf[IssueTransaction])
-        case _ => None
-      }.map(tx => new String(tx.name, Charsets.UTF_8)).getOrElse("Unknown")
+      case tx: IssueTransaction => Some(tx.asInstanceOf[IssueTransaction])
+      case _ => None
+    }.map(tx => new String(tx.name, Charsets.UTF_8)).getOrElse("Unknown")
   }
 }
