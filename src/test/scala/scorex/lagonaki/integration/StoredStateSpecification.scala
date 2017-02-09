@@ -20,7 +20,6 @@ class StoredStateSpecification extends FunSuite with Matchers with TransactionTe
   private val history = application.transactionModule.blockStorage.history
   private val acc = applicationNonEmptyAccounts.head
   private val recipient = applicationEmptyAccounts.head
-  private val incrementingTimestampValidator: IncrementingTimestampValidator = state.validators.filter(_.isInstanceOf[IncrementingTimestampValidator]).head.asInstanceOf[IncrementingTimestampValidator]
 
   require(acc.address != recipient.address)
 
@@ -171,7 +170,7 @@ class StoredStateSpecification extends FunSuite with Matchers with TransactionTe
     val block = TestBlock(Seq(tx1, tx2))
     state.applyBlock(block)
 
-    val result = state.incrementingTimestampValidator.lastAccountPaymentTransaction(acc)
+    val result = IncrementingTimestampValidator.lastAccountPaymentTransaction(state.storage)(acc)
     result.isDefined shouldBe true
     result.get shouldBe tx2
   }
@@ -188,11 +187,11 @@ class StoredStateSpecification extends FunSuite with Matchers with TransactionTe
     val block2 = TestBlock(Seq(tx3, tx4))
     state.applyBlock(block2)
 
-    val result1 = state.incrementingTimestampValidator.lastAccountPaymentTransaction(acc)
+    val result1 = IncrementingTimestampValidator.lastAccountPaymentTransaction(state.storage)(acc)
     result1.isDefined shouldBe true
     result1.get shouldBe tx2
 
-    val result2 = state.incrementingTimestampValidator.lastAccountPaymentTransaction(recipient)
+    val result2 = IncrementingTimestampValidator.lastAccountPaymentTransaction(state.storage)(recipient)
     result2.isDefined shouldBe true
     result2.get shouldBe tx4
   }

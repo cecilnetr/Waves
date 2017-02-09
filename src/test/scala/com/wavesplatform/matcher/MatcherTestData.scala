@@ -98,19 +98,6 @@ trait MatcherTestData {
       if (db.getStoreVersion > 0) db.rollback()
     }
 
-    val extendedState = new AssetsExtendedState(storage) {
-      override def getAssetQuantity(assetId: AssetId): Long = Long.MaxValue
-    }
-
-    val incrementingTimestampValidator = new IncrementingTimestampValidator(settings, storage)
-    val validators = Seq(
-      extendedState,
-      incrementingTimestampValidator,
-      new GenesisValidator,
-      new OrderMatchStoredState(storage),
-      new IncludedValidator(storage, settings),
-      new ActivatedValidator(settings)
-    )
     new StoredState(storage, settings) {
       override def assetBalance(account: AssetAcc): Long = Long.MaxValue
     }

@@ -8,10 +8,9 @@ import com.wavesplatform.matcher.market.OrderBookActor.{GetOrderBookResponse, Or
 import com.wavesplatform.settings.WavesSettings
 import play.api.libs.json.{JsArray, JsValue, Json}
 import scorex.crypto.encode.Base58
-import scorex.transaction.SimpleTransactionModule._
 import scorex.transaction.assets.exchange.Validation.booleanOperators
 import scorex.transaction.assets.exchange.{AssetPair, Order, Validation}
-import scorex.transaction.state.database.blockchain.StoredState
+import scorex.transaction.state.database.blockchain.{AssetsExtendedState, StoredState}
 import scorex.transaction.{AssetId, TransactionModule}
 import scorex.utils.{NTP, ScorexLogging}
 import scorex.wallet.Wallet
@@ -28,7 +27,7 @@ class MatcherActor(storedState: StoredState, wallet: Wallet, settings: WavesSett
   val openMarkets: mutable.Buffer[MarketData] = mutable.Buffer.empty[MarketData]
 
   def createOrderBook(pair: AssetPair): ActorRef = {
-    def getAssetName(asset: Option[AssetId]) = asset.map(storedState.assetsExtension.getAssetName).getOrElse(AssetPair.WavesName)
+    def getAssetName(asset: Option[AssetId]) = asset.map(AssetsExtendedState.getAssetName(storedState.storage)).getOrElse(AssetPair.WavesName)
 
     openMarkets += MarketData(pair, getAssetName(pair.first), getAssetName(pair.second), NTP.correctedTime())
 
@@ -38,9 +37,9 @@ class MatcherActor(storedState: StoredState, wallet: Wallet, settings: WavesSett
 
   def basicValidation(msg: {def assetPair: AssetPair}): Validation = {
     Try(msg.assetPair).isSuccess :| "Invalid AssetPair" &&
-      msg.assetPair.first.map(storedState.assetsExtension.getAssetQuantity).forall(_ > 0) :|
+      msg.assetPair.first.map(AssetsExtendedState.getAssetQuantity(storedState.storage)).forall(_ > 0) :|
         s"Unknown Asset ID: ${msg.assetPair.firstStr}" &&
-      msg.assetPair.second.map(storedState.assetsExtension.getAssetQuantity).forall(_ > 0) :|
+      msg.assetPair.second.map(AssetsExtendedState.getAssetQuantity(storedState.storage)).forall(_ > 0) :|
         s"Unknown Asset ID: ${msg.assetPair.secondStr}"
   }
 

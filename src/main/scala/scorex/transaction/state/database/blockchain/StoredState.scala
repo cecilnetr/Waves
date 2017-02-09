@@ -20,12 +20,6 @@ import scala.concurrent.duration._
 import scala.util.Try
 import scala.util.control.NonFatal
 
-
-/**
-  * Validation and processing of data with respect to the local storage
-  *
-  * Use fromDB method of StoredState object to create new instance
-  */
 class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI with OrderMatchStorageI, settings: ChainParameters)
   extends LagonakiState with ScorexLogging {
 
@@ -38,10 +32,10 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
     ActivatedValidator.isValid(settings)
   )
 
-  val processors: Seq[StateProcessor] = Seq(
-    new AssetsExtendedState(storage),
-    new OrderMatchStoredStateProcessor(storage),
-    new IncludedStateProcessor(storage, settings))
+  val processors: Seq[(Transaction, Long, Int) => Unit] = Seq(
+    AssetsExtendedState.process(storage),
+    OrderMatchStoredState.process(storage),
+    IncludedValidator.process(storage, settings))
 
   override def included(id: Array[Byte]): Option[Int] = storage.included(id)
 
@@ -243,7 +237,7 @@ class StoredState(val storage: StateStorageI with AssetsExtendedStateStorageI wi
       storage.putLastStates(ch._1.key, h)
       ch._2._2.foreach {
         case tx: Transaction =>
-          processors.foreach(_.process(tx, blockTs, h))
+          processors.foreach(_.apply(tx, blockTs, h))
         case _ =>
       }
       ch._1.assetId.foreach(storage.updateAccountAssets(ch._1.account.address, _))

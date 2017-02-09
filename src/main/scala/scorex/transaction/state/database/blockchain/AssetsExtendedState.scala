@@ -4,25 +4,19 @@ import com.google.common.base.Charsets
 import scorex.crypto.encode.Base58
 import scorex.transaction._
 import scorex.transaction.assets.{AssetIssuance, BurnTransaction, IssueTransaction, ReissueTransaction}
-import scorex.transaction.state.database.state.extension.StateProcessor
 import scorex.transaction.state.database.state.storage.{AssetsExtendedStateStorageI, StateStorageI}
 import scorex.utils.ScorexLogging
 
 import scala.util.{Failure, Success}
 
-//TODO move to state.extension package
-class AssetsExtendedState(storage: StateStorageI with AssetsExtendedStateStorageI) extends ScorexLogging with StateProcessor {
-
-  override def process(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
+object AssetsExtendedState extends ScorexLogging {
+  def process(storage: AssetsExtendedStateStorageI)(tx: Transaction, blockTs: Long, height: Int): Unit = tx match {
     case tx: AssetIssuance =>
       AssetsExtendedState.addAsset(storage)(tx.assetId, height, tx.id, tx.quantity, tx.reissuable)
     case tx: BurnTransaction =>
       AssetsExtendedState.burnAsset(storage)(tx.assetId, height, tx.id, -tx.amount)
     case _ =>
   }
-}
-
-object AssetsExtendedState extends ScorexLogging {
 
   def isValid(storage: StateStorageI with AssetsExtendedStateStorageI) (tx: Transaction): Boolean = tx match {
     case tx: ReissueTransaction =>
@@ -48,7 +42,6 @@ object AssetsExtendedState extends ScorexLogging {
           false
       })
   }
-
 
   private[blockchain] def addAsset(storage: AssetsExtendedStateStorageI)(assetId: AssetId, height: Int, transactionId: Array[Byte], quantity: Long, reissuable: Boolean): Unit = {
     val asset = Base58.encode(assetId)
