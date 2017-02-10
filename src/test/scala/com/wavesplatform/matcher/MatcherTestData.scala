@@ -9,8 +9,7 @@ import scorex.crypto.hash.SecureCryptographicHash
 import scorex.settings.ChainParameters
 import scorex.transaction._
 import scorex.transaction.assets.exchange.{AssetPair, Order}
-import scorex.transaction.state.database.blockchain.{AssetsExtendedState, StoredState}
-import scorex.transaction.state.database.state.extension._
+import scorex.transaction.state.database.blockchain.StoredState
 import scorex.transaction.state.database.state.storage.{MVStoreAssetsStateStorage, MVStoreOrderMatchStorage, MVStoreStateStorage, TheStorage}
 import scorex.utils.{ByteArrayExtension, NTP}
 
@@ -92,14 +91,12 @@ trait MatcherTestData {
     matcherFee: Long <- maxWavesAnountGen
   } yield SellLimitOrder(price, amount, Order.sell(sender, MatcherAccount, pair, price, amount, timestamp, expiration, matcherFee))
 
-  def fromDBWithUnlimitedBalance(mvStore: MVStore, settings: ChainParameters): State = {
+  def fromDBWithUnlimitedBalance(mvStore: MVStore, settings: ChainParameters): ValidatorService = {
     val storage = new TheStorage {
       override val db: MVStore = mvStore
       if (db.getStoreVersion > 0) db.rollback()
     }
 
-    new StoredState(storage, settings) {
-      override def assetBalance(account: AssetAcc): Long = Long.MaxValue
-    }
+    ???
   }
 }

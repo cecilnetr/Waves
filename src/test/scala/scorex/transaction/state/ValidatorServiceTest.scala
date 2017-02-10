@@ -14,7 +14,7 @@ import scorex.utils._
 import scala.util.{Random, Success, Try}
 import scorex.settings.ChainParameters
 
-class StateTest extends PropSpec with Checkers {
+class ValidatorServiceTest extends PropSpec with Checkers {
   property("state test") {
     check(StateTestSpec.property())
   }
@@ -104,7 +104,7 @@ object StateTestSpec extends Commands {
 
   case class Sut(fileName: String) {
     val db = new MVStore.Builder().fileName(fileName).compress().open()
-    val storedState : scorex.transaction.State = StoredState.fromDB(db, ChainParameters.Disabled)
+    val storedState : scorex.transaction.ValidatorService = StoredState.fromDB(db, ChainParameters.Disabled)
     storedState.applyBlock(TestBlock(genesisTxs))
   }
 
@@ -128,13 +128,12 @@ object StateTestSpec extends Commands {
 
   case class PutTransactions(txs: Seq[Transaction]) extends Command {
 
-    type Result = (Int, Long)
 
-    def run(sut: Sut): Result = sut.synchronized {
+    def run(sut: Sut): Int = sut.synchronized {
       assert(sut.storedState.allValid(txs, txs.map(_.timestamp).max))
       val block = TestBlock(txs)
       sut.storedState.applyBlock(block)
-      (sut.storedState.stateHeight, sut.storedState.totalBalance)
+      sut.storedState.stateHeight
     }
 
     def nextState(state: State): State = state.copy(

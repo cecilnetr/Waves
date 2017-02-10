@@ -10,15 +10,14 @@ import com.wavesplatform.settings.WavesSettings
 import scorex.api.http.CompositeHttpService
 import scorex.app.Application
 import scorex.settings.Settings
-import scorex.transaction.{BlockStorage, State}
-import scorex.transaction.state.database.blockchain.StoredState
+import scorex.transaction.BlockStorage
 import scorex.utils.ScorexLogging
 import scorex.wallet.Wallet
 import scorex.waves.transaction.WavesTransactionModule
 
-import scala.concurrent.{Await, Future}
-import scala.reflect.runtime.universe._
+import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.reflect.runtime.universe._
 
 trait MatcherApplication extends ScorexLogging {
   implicit def actorSystem: ActorSystem
@@ -31,8 +30,6 @@ trait MatcherApplication extends ScorexLogging {
 
   def wallet: Wallet
 
-  def storedState: State = blockStorage.state
-
   lazy val matcherApiRoutes = Seq(
     MatcherApiRoute(this.asInstanceOf[Application], matcher)
   )
@@ -41,7 +38,7 @@ trait MatcherApplication extends ScorexLogging {
     typeOf[MatcherApiRoute]
   )
 
-  lazy val matcher: ActorRef = actorSystem.actorOf(MatcherActor.props(storedState, wallet, settings,
+  lazy val matcher: ActorRef = actorSystem.actorOf(MatcherActor.props(wallet, settings,
     transactionModule), MatcherActor.name)
 
   @volatile var matcherServerBinding: ServerBinding = _

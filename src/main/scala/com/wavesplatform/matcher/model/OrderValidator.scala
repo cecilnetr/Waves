@@ -3,7 +3,7 @@ package com.wavesplatform.matcher.model
 import com.wavesplatform.matcher.MatcherSettings
 import com.wavesplatform.matcher.market.OrderBookActor.CancelOrder
 import scorex.account.PublicKeyAccount
-import scorex.transaction.{AssetAcc, State}
+import scorex.transaction.{AssetAcc}
 import scorex.transaction.assets.exchange.Validation.booleanOperators
 import scorex.transaction.assets.exchange.{Order, Validation}
 import scorex.transaction.state.database.blockchain.StoredState
@@ -12,7 +12,6 @@ import scorex.wallet.Wallet
 
 trait OrderValidator {
   this: OrderHistory =>
-  val storedState: State
   val settings: MatcherSettings
   val wallet: Wallet
 
@@ -21,8 +20,8 @@ trait OrderValidator {
   def isBalanceWithOpenOrdersEnough(order: Order): Boolean = {
     val (acc, feeAcc) = (AssetAcc(order.senderPublicKey, order.spendAssetId), AssetAcc(order.senderPublicKey, None))
 
-    val (assBal, feeBal) = (storedState.assetBalance(acc) - assetsToSpend.getOrElse(acc.key, 0L),
-      storedState.assetBalance(feeAcc) - assetsToSpend.getOrElse(feeAcc.key, 0L))
+    val (assBal, feeBal) = (StoredState.assetBalance(???)(acc) - assetsToSpend.getOrElse(acc.key, 0L),
+      StoredState.assetBalance(???)(feeAcc) - assetsToSpend.getOrElse(feeAcc.key, 0L))
 
     if (acc != feeAcc) assBal >= order.getSpendAmount(order.price, order.amount) && feeBal >= order.matcherFee
     else assBal >= order.getSpendAmount(order.price, order.amount) + order.matcherFee

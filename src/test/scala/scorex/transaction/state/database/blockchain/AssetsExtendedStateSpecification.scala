@@ -6,7 +6,6 @@ import org.scalatest.prop.{GeneratorDrivenPropertyChecks, PropertyChecks}
 import org.scalatest.{Assertions, Matchers, PropSpec}
 import scorex.transaction.TransactionGen
 import scorex.transaction.state.database.state.storage.{MVStoreAssetsStateStorage, MVStoreStateStorage}
-import AssetsExtendedState._
 
 class AssetsExtendedStateSpecification extends PropSpec with PropertyChecks with GeneratorDrivenPropertyChecks
   with Matchers with TransactionGen with Assertions {

@@ -4,6 +4,7 @@ import org.h2.mvstore.MVStore
 import scorex.block.Block
 import scorex.block.Block.BlockId
 import scorex.crypto.encode.Base58
+import scorex.transaction.state.database.blockchain.StoredState
 import scorex.utils.ScorexLogging
 
 import scala.util.{Failure, Success, Try}
@@ -15,14 +16,13 @@ trait BlockStorage extends ScorexLogging {
 
   def history: History
 
-  def state: State
 
   //Append block to current state
   def appendBlock(block: Block): Try[Unit] = {
     //TODO Rollback state for blocktree
     history.appendBlock(block).map { blocks =>
       blocks foreach { b =>
-        state.applyBlock(b) match {
+        StoredState.applyBlock(???, ???)(b) match {
           case Failure(e) =>
             log.error("Failed to apply block to state", e)
             db.rollback()
@@ -43,7 +43,7 @@ trait BlockStorage extends ScorexLogging {
       case h: BlockChain => h.heightOf(blockId) match {
         case Some(height) =>
           while (!h.lastBlock.uniqueId.sameElements(blockId)) h.discardBlock()
-          state.rollbackTo(height)
+          StoredState.rollbackTo(???)(height)
         case None =>
           log.warn(s"RemoveAfter non-existing block ${Base58.encode(blockId)}")
       }

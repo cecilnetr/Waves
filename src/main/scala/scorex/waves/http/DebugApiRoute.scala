@@ -57,7 +57,7 @@ case class DebugApiRoute(application: RunnableApplication)(implicit val context:
   def state: Route = {
     path("state") {
       getJsonRoute {
-        JsonResponse(application.blockStorage.state.toJson(None), StatusCodes.OK)
+        JsonResponse(StoredState.toJson(???)(None), StatusCodes.OK)
       }
     }
   }
@@ -70,7 +70,7 @@ case class DebugApiRoute(application: RunnableApplication)(implicit val context:
   def stateAt: Route = {
     path("state" / IntNumber) { case height =>
       getJsonRoute {
-        JsonResponse(application.blockStorage.state.toJson(Some(height)), StatusCodes.OK)
+        JsonResponse(StoredState.toJson(???)(Some(height)), StatusCodes.OK)
       }
     }
   }
@@ -83,7 +83,7 @@ case class DebugApiRoute(application: RunnableApplication)(implicit val context:
   def stateWaves: Route = {
     path("stateWaves" / IntNumber) { height =>
       getJsonRoute {
-        val res = application.blockStorage.state.toWavesJson(height)
+        val res = StoredState.toWavesJson(???)(height)
         JsonResponse(res, StatusCodes.OK)
       }
     }
@@ -97,10 +97,9 @@ case class DebugApiRoute(application: RunnableApplication)(implicit val context:
   def info: Route = {
     path("info") {
       getJsonRoute {
-        val state = application.blockStorage.state
         val json = Json.obj(
-          "stateHeight" -> state.stateHeight,
-          "stateHash" -> state.hash
+          "stateHeight" -> StoredState.stateHeight(???),
+          "stateHash" -> StoredState.hash(???)
         )
 
         JsonResponse(json, StatusCodes.OK)

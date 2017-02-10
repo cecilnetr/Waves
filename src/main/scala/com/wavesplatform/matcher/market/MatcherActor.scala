@@ -10,8 +10,8 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import scorex.crypto.encode.Base58
 import scorex.transaction.assets.exchange.Validation.booleanOperators
 import scorex.transaction.assets.exchange.{AssetPair, Order, Validation}
-import scorex.transaction.state.database.blockchain.{AssetsExtendedState, StoredState}
-import scorex.transaction.{AssetId, State, TransactionModule}
+import scorex.transaction.state.database.blockchain.StoredState
+import scorex.transaction.{AssetId, ValidatorService, TransactionModule}
 import scorex.utils.{NTP, ScorexLogging}
 import scorex.wallet.Wallet
 
@@ -19,7 +19,7 @@ import scala.collection.mutable
 import scala.language.reflectiveCalls
 import scala.util.Try
 
-class MatcherActor(storedState: State, wallet: Wallet, settings: WavesSettings,
+class MatcherActor(wallet: Wallet, settings: WavesSettings,
                    transactionModule: TransactionModule
                   ) extends PersistentActor with ScorexLogging {
   import MatcherActor._
@@ -27,19 +27,19 @@ class MatcherActor(storedState: State, wallet: Wallet, settings: WavesSettings,
   val openMarkets: mutable.Buffer[MarketData] = mutable.Buffer.empty[MarketData]
 
   def createOrderBook(pair: AssetPair): ActorRef = {
-    def getAssetName(asset: Option[AssetId]) = asset.map(AssetsExtendedState.getAssetName(storedState.storage)).getOrElse(AssetPair.WavesName)
+    def getAssetName(asset: Option[AssetId]) = asset.map(StoredState.getAssetName(???)).getOrElse(AssetPair.WavesName)
 
     openMarkets += MarketData(pair, getAssetName(pair.first), getAssetName(pair.second), NTP.correctedTime())
 
-    context.actorOf(OrderBookActor.props(pair, storedState, wallet, settings, transactionModule),
+    context.actorOf(OrderBookActor.props(pair, wallet, settings, transactionModule),
       OrderBookActor.name(pair))
   }
 
   def basicValidation(msg: {def assetPair: AssetPair}): Validation = {
     Try(msg.assetPair).isSuccess :| "Invalid AssetPair" &&
-      msg.assetPair.first.map(AssetsExtendedState.getAssetQuantity(storedState.storage)).forall(_ > 0) :|
+      msg.assetPair.first.map(StoredState.getAssetQuantity(???)).forall(_ > 0) :|
         s"Unknown Asset ID: ${msg.assetPair.firstStr}" &&
-      msg.assetPair.second.map(AssetsExtendedState.getAssetQuantity(storedState.storage)).forall(_ > 0) :|
+      msg.assetPair.second.map(StoredState.getAssetQuantity(???)).forall(_ > 0) :|
         s"Unknown Asset ID: ${msg.assetPair.secondStr}"
   }
 
@@ -94,9 +94,9 @@ class MatcherActor(storedState: State, wallet: Wallet, settings: WavesSettings,
 
 object MatcherActor {
   def name = "matcher"
-  def props(storedState: State, wallet: Wallet, settings: WavesSettings,
+  def props(wallet: Wallet, settings: WavesSettings,
             transactionModule: TransactionModule): Props =
-    Props(new MatcherActor(storedState, wallet, settings, transactionModule))
+    Props(new MatcherActor(wallet, settings, transactionModule))
 
   case class OrderBookCreated(pair: AssetPair)
 

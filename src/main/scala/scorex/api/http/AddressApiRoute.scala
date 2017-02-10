@@ -12,6 +12,7 @@ import scorex.account.{Account, PrivateKeyAccount, PublicKeyAccount}
 import scorex.app.Application
 import scorex.crypto.EllipticCurveImpl
 import scorex.crypto.encode.Base58
+import scorex.transaction.state.database.blockchain.StoredState
 
 import scala.util.{Failure, Success, Try}
 
@@ -24,7 +25,6 @@ case class AddressApiRoute(application: Application)(implicit val context: Actor
   val settings = application.settings
 
   private val wallet = application.wallet
-  private val state = application.blockStorage.state
   private implicit val transactionModule = application.transactionModule
 
   override lazy val route =
@@ -240,7 +240,7 @@ case class AddressApiRoute(application: Application)(implicit val context: Actor
       val json = Json.obj(
         "address" -> account.address,
         "confirmations" -> confirmations,
-        "balance" -> state.balanceWithConfirmations(account, confirmations)
+        "balance" -> StoredState.balanceWithConfirmations(???)(account, confirmations, None)
       )
       JsonResponse(json, StatusCodes.OK)
     }

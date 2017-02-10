@@ -11,7 +11,7 @@ import scorex.account.Account
 import scorex.app.Application
 import scorex.crypto.encode.Base58
 import scorex.transaction.TransactionsBlockField
-import scorex.transaction.state.database.blockchain.StoredBlockchain
+import scorex.transaction.state.database.blockchain.{StoredBlockchain, StoredState}
 
 import scala.util.{Success, Try}
 
@@ -22,8 +22,6 @@ case class TransactionsApiRoute(application: Application)(implicit val context: 
   val MaxTransactionsPerRequest = 1000
 
   val settings = application.settings
-
-  private val state: scorex.transaction.State = application.blockStorage.state
 
   override lazy val route =
     pathPrefix("transactions") {
@@ -42,7 +40,7 @@ case class TransactionsApiRoute(application: Application)(implicit val context: 
       getJsonRoute {
         if (limit <= MaxTransactionsPerRequest) {
           val account = new Account(address)
-          val txJsons = state.accountTransactions(account, limit).map(_.json)
+          val txJsons = StoredState.accountTransactions(???)(account, limit).map(_.json)
           JsonResponse(Json.arr(txJsons), StatusCodes.OK)
         } else TooBigArrayAllocation.response
       }
@@ -59,7 +57,7 @@ case class TransactionsApiRoute(application: Application)(implicit val context: 
       getJsonRoute {
         Base58.decode(encoded) match {
           case Success(sig) =>
-            state.included(sig) match {
+            StoredState.included(???)(sig) match {
               case Some(h) =>
                 Try {
                   val block = application.blockStorage.history.asInstanceOf[StoredBlockchain].blockAt(h).get

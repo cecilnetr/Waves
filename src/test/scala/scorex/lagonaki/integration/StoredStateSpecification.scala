@@ -7,7 +7,6 @@ import scorex.crypto.encode.Base58
 import scorex.lagonaki.TransactionTestingCommons
 import scorex.lagonaki.mocks.TestBlock
 import scorex.transaction.state.database.state.AccState
-import scorex.transaction.state.database.state.extension.IncrementingTimestampValidator
 import scorex.transaction.state.wallet.{IssueRequest, TransferRequest}
 import scorex.transaction.{AssetAcc, FeesStateChange, PaymentTransaction}
 import scorex.utils._

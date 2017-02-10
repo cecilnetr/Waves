@@ -33,6 +33,4 @@ class BlockStorageImpl(settings: Settings, forksParams: ChainParameters)
       new StoredBlockchain(db)(consensusModule, transactionModule)
   }
 
-  override val state: State = StoredState.fromDB(db, forksParams)
-
 }

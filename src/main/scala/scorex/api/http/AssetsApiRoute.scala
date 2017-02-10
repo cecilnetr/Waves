@@ -30,7 +30,6 @@ case class AssetsApiRoute(application: Application)(implicit val context: ActorR
   val settings = application.settings
 
   private val wallet = application.wallet
-  private val state = application.blockStorage.state
   private implicit val transactionModule = application.transactionModule.asInstanceOf[SimpleTransactionModule]
 
   override lazy val route =
@@ -61,7 +60,7 @@ case class AssetsApiRoute(application: Application)(implicit val context: ActorR
     path(Segment / "distribution") { assetId =>
       getJsonRoute {
         Base58.decode(assetId) match {
-          case Success(byteArray) => JsonResponse(Json.toJson(state.assetDistribution(byteArray)), StatusCodes.OK)
+          case Success(byteArray) => JsonResponse(Json.toJson(StoredState.assetDistribution(???)(byteArray)), StatusCodes.OK)
           case Failure(e) => ApiError.fromValidationError(scorex.transaction.ValidationError.CustomValidationError("Must be base58-encoded assetId"))
         }
       }
@@ -257,7 +256,7 @@ case class AssetsApiRoute(application: Application)(implicit val context: ActorR
         val json = Json.obj(
           "address" -> account.address,
           "assetId" -> assetIdStr,
-          "balance" -> state.assetBalance(AssetAcc(account, Some(assetId)))
+          "balance" -> StoredState.assetBalance(???)(AssetAcc(account, Some(assetId)))
         )
         JsonResponse(json, StatusCodes.OK)
       case _ => InvalidAddress.response
@@ -267,7 +266,7 @@ case class AssetsApiRoute(application: Application)(implicit val context: ActorR
   private def balanceJson(address: String): JsonResponse = {
     val account = new Account(address)
     if (Account.isValid(account)) {
-      val balances: Seq[JsObject] = state.getAccountBalance(account).map { p =>
+      val balances: Seq[JsObject] = StoredState.getAccountBalance(???)(account).map { p =>
         JsObject(Seq(
           "assetId" -> JsString(Base58.encode(p._1)),
           "balance" -> JsNumber(p._2._1),

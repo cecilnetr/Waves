@@ -12,7 +12,7 @@ import com.wavesplatform.settings.WavesSettings
 import play.api.libs.json.{JsString, Json}
 import scorex.crypto.encode.Base58
 import scorex.transaction.SimpleTransactionModule._
-import scorex.transaction.{State, TransactionModule}
+import scorex.transaction.{ValidatorService, TransactionModule}
 import scorex.transaction.assets.exchange._
 import scorex.transaction.state.database.blockchain.StoredState
 import scorex.utils.{NTP, ScorexLogging}
@@ -22,7 +22,7 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class OrderBookActor(assetPair: AssetPair, val storedState: State,
+class OrderBookActor(assetPair: AssetPair,
                      val wallet: Wallet, val settings: WavesSettings,
                      val transactionModule: TransactionModule)
   extends PersistentActor
@@ -164,9 +164,9 @@ class OrderBookActor(assetPair: AssetPair, val storedState: State,
 }
 
 object OrderBookActor {
-  def props(assetPair: AssetPair, storedState: State,
+  def props(assetPair: AssetPair,
             wallet: Wallet, settings: WavesSettings, transactionModule: TransactionModule): Props =
-    Props(new OrderBookActor(assetPair, storedState, wallet, settings, transactionModule))
+    Props(new OrderBookActor(assetPair, wallet, settings, transactionModule))
 
   def name(assetPair: AssetPair): String = assetPair.toString
 
